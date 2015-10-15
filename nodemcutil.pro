@@ -13,3 +13,6 @@ SOURCES += main.cpp
 
 HEADERS +=
 
+DISTFILES += \
+    README.md
+
