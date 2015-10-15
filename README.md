@@ -8,3 +8,12 @@ Command line tool to communicate with ESP8266 with NodeMCU firmware.
 Windows (x86, x86-64)
 Linux
 MacOSX (x86-64)
+
+###Detailed features
+TBD
+
+###Binaries
+TBD
+
+###Homepage
+TBD
