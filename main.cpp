@@ -7,11 +7,78 @@
 #include <QSerialPortInfo>
 #include <QSettings>
 
+QSettings *settings;
 QTextStream output(stdout);
+
 QString defaultPortName;
 int defaultBaudRate;
 bool verbose;
-QSettings *settings;
+
+void setPortName(QString portName)
+{
+    // check whether a number was provided
+    bool ok;
+    int index = portName.toInt(&ok);
+
+    // if it's a number, check whether index fits and set default
+    if (ok) {
+        if (index > QSerialPortInfo::availablePorts().length()) {
+            output << "error: index " << index << " out of range to set portname" << endl;
+            exit(1);
+        }
+        defaultPortName = QSerialPortInfo::availablePorts().at(index-1).portName();
+    } else {
+        // otherwise check whether name exists
+        foreach(auto port, QSerialPortInfo::availablePorts()) {
+            if (port.portName().compare(portName)==0) {
+                defaultPortName = portName;
+                break;
+            }
+        }
+        output << "error: portname '" << portName << "' not found to set portname" << endl;
+        exit(1);
+    }
+    settings->setValue("defaultPortName", defaultPortName);
+    if (verbose) {
+        output << "now using default portname: '" << defaultPortName << "." << endl;
+    }
+}
+
+void setBaudRate(QString baudRate)
+{
+    bool ok;
+    int baud = baudRate.toInt(&ok);
+    if (ok) {
+        defaultBaudRate = baud;
+        settings->setValue("defaultBaudRate", defaultBaudRate);
+        if (verbose) {
+            output << "now using default baudrate " << defaultBaudRate << " baud" << endl;
+        }
+    } else {
+        output << "error, baudrate '" << baudRate << "' not a legal value" << endl;
+        exit(1);
+    }
+}
+
+void readDefaultSettings(void)
+{
+    // read settings for default values
+    if (settings->contains("defaultPortName")) {
+        defaultPortName = settings->value("defaultPortName").toString();
+        if (verbose) {
+            output << "read default portname '" << defaultPortName << "' from settings" << endl;
+        }
+    }
+    if (settings->contains("defaultBaudRate")) {
+        defaultBaudRate = settings->value("defaultBaudRate").toInt();
+        if (verbose) {
+            output << "read default baudrate " << defaultBaudRate << " baud" << endl;
+        }
+    } else {
+        setBaudRate("9600");
+    }
+
+}
 
 void listSerialPorts(void)
 {
@@ -58,48 +125,25 @@ int main(int argc, char *argv[])
 
     // process commandline
     parser.process(app);
-    if (parser.isSet(verboseOption)) {
-        verbose=true;
-    }
+    verbose = parser.isSet(verboseOption);
 
     if (verbose) {
         output << "nodemcutil 0.1" << endl << "(c)2015 R.F. Lens" << endl;
     }
 
-    // read settings for default values
-    if (settings->contains("defaultPortName")) {
-        defaultPortName = settings->value("defaultPortName").toString();
-        if (verbose) {
-            output << "read default portname '" << defaultPortName << "' from settings" << endl;
-        }
-    }
-    if (settings->contains("defaultBaudRate")) {
-        defaultBaudRate = settings->value("defaultBaudRate").toInt();
-        if (verbose) {
-            output << "read default baudrate " << defaultBaudRate << " baud" << endl;
-        }
-    }
+    readDefaultSettings();
 
     // process settings
     if (parser.isSet(portOption)) {
-        defaultPortName = parser.value(portOption);
-        settings->setValue("defaultPortName", defaultPortName);
-        if (verbose) {
-            output << "now using default portname: '" << defaultPortName << "." << endl;
-        }
+        setPortName(parser.value(portOption));
     }
     if (parser.isSet(baudOption)) {
-        defaultBaudRate = parser.value(baudOption).toInt();
-        settings->setValue("defaultBaudRate", defaultBaudRate);
-        if (verbose) {
-            output << "now using default baudrate " << defaultBaudRate << " baud" << endl;
-        }
+        setBaudRate(parser.value(baudOption));
     }
 
+    // check commands
     if (parser.isSet(listPortsCmd)) {
         listSerialPorts();
-    } else {
-        output << "no command supplied!" << endl << parser.helpText();
     }
     output << endl;
     return 0;
