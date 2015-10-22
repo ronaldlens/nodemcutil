@@ -51,6 +51,7 @@ void setBaudRate(QString baudRate)
     if (ok) {
         defaultBaudRate = baud;
         settings->setValue("defaultBaudRate", defaultBaudRate);
+
         if (verbose) {
             output << "now using default baudrate " << defaultBaudRate << " baud" << endl;
         }
@@ -65,7 +66,18 @@ void readDefaultSettings(void)
     // read settings for default values
     if (settings->contains("defaultPortName")) {
         defaultPortName = settings->value("defaultPortName").toString();
-        if (verbose) {
+        bool found = false;
+        foreach(auto port, QSerialPortInfo::availablePorts()) {
+            if (defaultPortName.compare(port.portName()) == 0) {
+                found = true;
+            }
+        }
+        if (!found) {
+            if (verbose) {
+                output << "default portname '" << defaultPortName << "' not available." << endl;
+            }
+            defaultPortName = "";
+        } else if (verbose) {
             output << "read default portname '" << defaultPortName << "' from settings" << endl;
         }
     }
